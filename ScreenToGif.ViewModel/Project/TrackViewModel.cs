@@ -14,6 +14,7 @@ public class TrackViewModel : BaseViewModel
     private string _name = "";
     private Brush _accent = Brushes.Transparent;
     private string _cachePath = "";
+    private readonly EditorViewModel _editorViewModel = null;
     private ObservableCollection<SequenceViewModel> _sequences = new();
 
     public int Id
@@ -25,7 +26,12 @@ public class TrackViewModel : BaseViewModel
     public bool IsVisible
     {
         get => _isVisible;
-        set => SetProperty(ref _isVisible, value);
+        set
+        {
+            SetProperty(ref _isVisible, value);
+
+            EditorViewModel?.Render();
+        }
     }
 
     public bool IsLocked
@@ -52,6 +58,12 @@ public class TrackViewModel : BaseViewModel
         set => SetProperty(ref _cachePath, value);
     }
 
+    internal EditorViewModel EditorViewModel
+    {
+        get => _editorViewModel;
+        private init => SetProperty(ref _editorViewModel, value);
+    }
+
     /// <summary>
     /// A track can have multiple sequences of the same type.
     /// </summary>
@@ -61,7 +73,7 @@ public class TrackViewModel : BaseViewModel
         set => SetProperty(ref _sequences, value);
     }
 
-    public static TrackViewModel FromModel(Track track)
+    public static TrackViewModel FromModel(Track track, EditorViewModel editorViewModel)
     {
         return new TrackViewModel
         {
@@ -71,7 +83,8 @@ public class TrackViewModel : BaseViewModel
             Name = track.Name,
             Accent = new SolidColorBrush(ColorExtensions.GenerateRandomPastel()),
             CachePath = track.CachePath,
-            Sequences = new ObservableCollection<SequenceViewModel>(track.Sequences.Select(SequenceViewModel.FromModel))
+            EditorViewModel = editorViewModel,
+            Sequences = new ObservableCollection<SequenceViewModel>(track.Sequences.Select(s => SequenceViewModel.FromModel(s, editorViewModel)))
         };
     }
 

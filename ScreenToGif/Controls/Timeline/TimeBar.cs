@@ -89,23 +89,24 @@ namespace ScreenToGif.Controls.Timeline
             base.OnMouseWheel(e);
 
             _mouseWheelCumulativeDelta = 0;
-
-            var Zoom = 1;
-
+            
             if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
             {
                 //Zoom in and out.
-                Zoom += e.Delta > 0 ? 1 : -1;
+                var a = e.Delta > 0 ? 1 : -1;
+
+                //Increase/decrease difference between Start/End equally.
+                //Validate min/max view span.
+
                 _rendered.InvalidateVisual();
                 return;
             }
 
-            var total = (ViewportEnd > TimeSpan.Zero ? ViewportEnd : TimeSpan.FromSeconds(30)).TotalMilliseconds;
-            var increment = (total - 100d) / 200d; //From -100 to 100 is 200 points. The difference between 100ms to total gets divided by these 200 points.
-            var inView = increment * ((Zoom * -1) + 100) + 100; //Zoom * increment + the minimum timespan.
+            var inView = (ViewportEnd - ViewportStart).TotalMilliseconds;
             var perPixel = inView / ActualWidth;
 
             ViewportStart += TimeSpan.FromMilliseconds((e.Delta > 0 ? 1 : -1) * perPixel);
+            ViewportEnd += TimeSpan.FromMilliseconds((e.Delta > 0 ? 1 : -1) * perPixel);
 
             _rendered.InvalidateVisual();
         }

@@ -12,12 +12,12 @@ namespace ScreenToGif.Controls.Timeline
         #region Properties
 
         public static readonly DependencyProperty TracksProperty = DependencyProperty.Register(nameof(Tracks), typeof(ObservableCollection<TrackViewModel>), typeof(Timeline), new PropertyMetadata(null, Tracks_Changed));
+        public static readonly DependencyProperty ViewportStartProperty = DependencyProperty.Register(nameof(ViewportStart), typeof(TimeSpan), typeof(Timeline), new PropertyMetadata(TimeSpan.Zero, Viewport_Changed, ViewportStart_Coerce));
+        public static readonly DependencyProperty ViewportEndProperty = DependencyProperty.Register(nameof(ViewportEnd), typeof(TimeSpan), typeof(Timeline), new PropertyMetadata(TimeSpan.Zero, Viewport_Changed));
+        public static readonly DependencyPropertyKey ViewportSpanPropertyKey = DependencyProperty.RegisterReadOnly(nameof(ViewportSpan), typeof(TimeSpan), typeof(Timeline), new PropertyMetadata(TimeSpan.Zero));
         public static readonly DependencyProperty CurrentProperty = DependencyProperty.Register(nameof(Current), typeof(TimeSpan), typeof(Timeline), new PropertyMetadata(TimeSpan.Zero, Current_Changed, Current_Coerce));
-        public static readonly DependencyProperty ViewportStartProperty = DependencyProperty.Register(nameof(ViewportStart), typeof(TimeSpan), typeof(Timeline), new PropertyMetadata(TimeSpan.Zero, ViewportStart_Changed, ViewportStart_Coerce));
-        public static readonly DependencyProperty ViewportEndProperty = DependencyProperty.Register(nameof(ViewportEnd), typeof(TimeSpan), typeof(Timeline), new PropertyMetadata(TimeSpan.Zero));
         public static readonly DependencyProperty SelectionStartProperty = DependencyProperty.Register(nameof(SelectionStart), typeof(TimeSpan?), typeof(Timeline), new PropertyMetadata((TimeSpan?)null));
         public static readonly DependencyProperty SelectionEndProperty = DependencyProperty.Register(nameof(SelectionEnd), typeof(TimeSpan?), typeof(Timeline), new PropertyMetadata((TimeSpan?)null));
-        public static readonly DependencyProperty ZoomProperty = DependencyProperty.Register(nameof(Zoom), typeof(double), typeof(Timeline), new PropertyMetadata(1D, Zoom_Changed, Zoom_Coerce));
         
         public ObservableCollection<TrackViewModel> Tracks
         {
@@ -25,6 +25,24 @@ namespace ScreenToGif.Controls.Timeline
             set => SetValue(TracksProperty, value);
         }
 
+        public TimeSpan ViewportStart
+        {
+            get => (TimeSpan)GetValue(ViewportStartProperty);
+            set => SetValue(ViewportStartProperty, value);
+        }
+
+        public TimeSpan ViewportEnd
+        {
+            get => (TimeSpan)GetValue(ViewportEndProperty);
+            set => SetValue(ViewportEndProperty, value);
+        }
+        
+        public TimeSpan ViewportSpan
+        {
+            get => (TimeSpan)GetValue(ViewportSpanPropertyKey.DependencyProperty);
+            private set => SetValue(ViewportSpanPropertyKey, value);
+        }
+        
         public TimeSpan Current
         {
             get => (TimeSpan)GetValue(CurrentProperty);
@@ -43,24 +61,6 @@ namespace ScreenToGif.Controls.Timeline
             set => SetValue(SelectionEndProperty, value);
         }
 
-        public TimeSpan ViewportStart
-        {
-            get => (TimeSpan)GetValue(ViewportStartProperty);
-            set => SetValue(ViewportStartProperty, value);
-        }
-
-        public TimeSpan ViewportEnd
-        {
-            get => (TimeSpan)GetValue(ViewportEndProperty);
-            set => SetValue(ViewportEndProperty, value);
-        }
-
-        public double Zoom
-        {
-            get => (double)GetValue(ZoomProperty);
-            set => SetValue(ZoomProperty, value);
-        }
-
         #endregion
 
         static Timeline()
@@ -73,12 +73,7 @@ namespace ScreenToGif.Controls.Timeline
             SetCurrentValue(TracksProperty, new ObservableCollection<TrackViewModel>());
         }
 
-        //Horizontal viewport (min and max by multiplier).
-        //Current view position (left).
-        //Current play head (current playback position, time based)
-        //Selection start-end (time-based)
         //Maximum time, but allowing users to move tracks further.
-
         //The view port will need to virtualized horizontally, based on the zoom level, size of the control and center of view, the renderization will happen.
 
         //Multiple tracks.
@@ -108,30 +103,18 @@ namespace ScreenToGif.Controls.Timeline
             return baseValue;
         }
 
-        private static void ViewportStart_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
+        private static void Viewport_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
+            if (d is not Timeline timeline)
+                return;
 
+            timeline.ViewportSpan = timeline.ViewportEnd - timeline.ViewportStart;
         }
 
         private static object ViewportStart_Coerce(DependencyObject d, object baseValue)
         {
             if (baseValue is TimeSpan value)
                 return value.TotalMilliseconds < 0 ? TimeSpan.Zero : value;
-
-            return baseValue;
-        }
-
-
-
-        private static void Zoom_Changed(DependencyObject d, DependencyPropertyChangedEventArgs e)
-        {
-
-        }
-
-        private static object Zoom_Coerce(DependencyObject d, object baseValue)
-        {
-            if (baseValue is double value)
-                return value > 100d ? 100d : value < -100d ? -100d : baseValue;
 
             return baseValue;
         }

@@ -54,7 +54,8 @@ public class EditorViewModel : BaseViewModel
         set
         {
             SetProperty(ref _current, value);
-            Seek();
+
+            Render();
         }
     }
 
@@ -146,7 +147,7 @@ public class EditorViewModel : BaseViewModel
         //  Pass token.
 
         var cached = await project.ConvertToCachedProject();
-        Project = ProjectViewModel.FromModel(cached);
+        Project = ProjectViewModel.FromModel(cached, this);
 
         InitializePreview();
         
@@ -246,7 +247,7 @@ public class EditorViewModel : BaseViewModel
         //Maybe simply store in a byte array and leave in memory.
     }
 
-    public void Seek()
+    public void Seek(TimeSpan timeStamp)
     {
         //Display mode:
         //  By timestamp
@@ -258,7 +259,7 @@ public class EditorViewModel : BaseViewModel
         //By seeking, display the updated info in Statistic tab.
         //Frame count will be hard to know for sure, as multiple sequences can coexist and apart from each other.
 
-        Render();
+        Current = timeStamp;
     }
 
     internal void Play()

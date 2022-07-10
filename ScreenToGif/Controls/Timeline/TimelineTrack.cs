@@ -1,5 +1,8 @@
+using ScreenToGif.ViewModel.Project;
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace ScreenToGif.Controls.Timeline
 {
@@ -9,10 +12,10 @@ namespace ScreenToGif.Controls.Timeline
     public class TimelineTrack : Control
     {
         public static readonly DependencyProperty TrackNameProperty = DependencyProperty.Register(nameof(TrackName), typeof(string), typeof(TimelineTrack), new PropertyMetadata(default(string)));
-
         public static readonly DependencyProperty IsTrackVisibleProperty = DependencyProperty.Register(nameof(IsTrackVisible), typeof(bool), typeof(TimelineTrack), new PropertyMetadata(true));
-
         public static readonly DependencyProperty IsTrackLockedProperty = DependencyProperty.Register(nameof(IsTrackLocked), typeof(bool), typeof(TimelineTrack), new PropertyMetadata(false));
+        public static readonly DependencyProperty TrackAccentProperty = DependencyProperty.Register(nameof(TrackAccent), typeof(Brush), typeof(TimelineTrack), new PropertyMetadata(default(Brush)));
+        public static readonly DependencyProperty SequencesProperty = DependencyProperty.Register(nameof(Sequences), typeof(ObservableCollection<SequenceViewModel>), typeof(TimelineTrack), new PropertyMetadata(null));
         
         public string TrackName
         {
@@ -31,6 +34,18 @@ namespace ScreenToGif.Controls.Timeline
             get => (bool)GetValue(IsTrackLockedProperty);
             set => SetValue(IsTrackLockedProperty, value);
         }
+
+        public Brush TrackAccent
+        {
+            get => (Brush)GetValue(TrackAccentProperty);
+            set => SetValue(TrackAccentProperty, value);
+        }
+
+        public ObservableCollection<SequenceViewModel> Sequences
+        {
+            get => (ObservableCollection<SequenceViewModel>)GetValue(SequencesProperty);
+            set => SetValue(SequencesProperty, value);
+        }
         
         static TimelineTrack()
         {
@@ -39,7 +54,9 @@ namespace ScreenToGif.Controls.Timeline
 
         //Header > content
         //Allow dragging sequences
-        //Render based on ViewportStart, Zoom
-        //
+        //Render based on ViewportStart, ViewPortEnd
+
+        //Render Sequences as elements.
+        //So, insert how many elements(sequences) as needed and position them based on Viewport and sequence positions.
     }
 }

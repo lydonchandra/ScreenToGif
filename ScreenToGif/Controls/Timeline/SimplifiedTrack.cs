@@ -11,8 +11,8 @@ namespace ScreenToGif.Controls.Timeline;
 /// </summary>
 public class SimplifiedTrack : Track
 {
-    public static readonly DependencyProperty EndValueProperty = DependencyProperty.Register(
-        nameof(EndValue), typeof(double), typeof(SimplifiedTrack), new FrameworkPropertyMetadata(default(double), FrameworkPropertyMetadataOptions.AffectsArrange));
+    public static readonly DependencyProperty EndValueProperty = DependencyProperty.Register(nameof(EndValue), typeof(double), typeof(SimplifiedTrack),
+        new FrameworkPropertyMetadata(default(double), FrameworkPropertyMetadataOptions.AffectsArrange));
 
     public double EndValue
     {
@@ -32,7 +32,7 @@ public class SimplifiedTrack : Track
     // Computes the length of the decrease button, thumb and increase button
     // Thumb's size is based on viewport and extent
     // returns false if the track should be hidden
-    private bool CalculateThumbSize(Size arrangeSize, double viewportSize, bool isVertical, out double leftSpace, out double thumbLength, out double rightSpace)
+    private bool CalculateThumbSize(Size arrangeSize, bool isVertical, out double leftSpace, out double thumbLength, out double rightSpace)
     {
         var min = Minimum;
         var range = Math.Max(0.0, Maximum - min);
@@ -54,8 +54,8 @@ public class SimplifiedTrack : Track
 
         //Get the thumb pixels length based on how much the ViewportSize represents.
         //thumbLength = trackLength * (viewportSize / Maximum);
-        thumbLength = viewportSize - offset;
-
+        thumbLength = trackLength * ((EndValue - offset) / Maximum);
+        
         CoerceLength(ref thumbLength, trackLength);
 
         thumbLength = Math.Max(thumbMinLength, thumbLength);
@@ -79,12 +79,7 @@ public class SimplifiedTrack : Track
 
         if (Visibility != Visibility.Visible)
             Visibility = Visibility.Visible;
-
-        //Total: 2554
-        //Thumb: 625
-        //Left: 1929
-        //Right: 0
-
+        
         //Compute lengths of increase and decrease button
         var remainingTrackLength = trackLength - thumbLength;
 
@@ -93,11 +88,6 @@ public class SimplifiedTrack : Track
 
         rightSpace = trackLength - thumbLength - leftSpace;
         CoerceLength(ref rightSpace, remainingTrackLength);
-
-        leftSpace = Value - min;
-        rightSpace = Maximum - viewportSize;
-
-        System.Diagnostics.Debug.WriteLine($"Left: {leftSpace} • Right: {rightSpace}");
 
         return true;
     }
@@ -115,10 +105,9 @@ public class SimplifiedTrack : Track
     protected override Size ArrangeOverride(Size arrangeSize)
     {
         var isVertical = Orientation == Orientation.Vertical;
-        var viewportSize = Math.Max(0.0, ViewportSize);
-
+        
         //Compute the thumb base on the viewport or don't arrange.
-        if (ViewportSize is < 1 or double.NaN || !CalculateThumbSize(arrangeSize, viewportSize, isVertical, out var decreaseButtonLength, out var thumbLength, out var increaseButtonLength))
+        if (Value.NearlyEquals(EndValue) || !CalculateThumbSize(arrangeSize, isVertical, out var decreaseButtonLength, out var thumbLength, out var increaseButtonLength))
             return arrangeSize;
         
         //Layout the pieces of track
@@ -133,8 +122,6 @@ public class SimplifiedTrack : Track
             pieceSize.Height = thumbLength;
 
             Thumb?.Arrange(new Rect(offset, pieceSize));
-
-            //ThumbCenterOffset = offset.Y + (thumbLength * 0.5);
         }
         else
         {
@@ -144,25 +131,21 @@ public class SimplifiedTrack : Track
             pieceSize.Width = thumbLength;
 
             Thumb?.Arrange(new Rect(offset, pieceSize));
-
-            //ThumbCenterOffset = offset.X + (thumbLength * 0.5);
         }
 
         return arrangeSize;
     }
 
-    //TODO: Convert this method to return Value at position, but not relative to Thumb.
     public override double ValueFromPoint(Point pt)
     {
-        double val;
+        var scale = IsDirectionReversed ? -1d : 1d;
+        var range = Math.Max(0.0, Maximum - Minimum);
 
-        // Find distance from center of thumb to given point.
         if (Orientation == Orientation.Horizontal)
-            val = Value + ValueFromDistance(pt.X, pt.Y - (RenderSize.Height * 0.5));
-        else
-            val = Value + ValueFromDistance(pt.X - (RenderSize.Width * 0.5), pt.Y);
+            return Math.Max(Minimum, Math.Min(Maximum, scale * (pt.X * range) / ActualWidth + Minimum));
 
-        return Math.Max(Minimum, Math.Min(Maximum, val));
+        //Increases in y cause decreases in Sliders value
+        return Math.Max(Minimum, Math.Min(Maximum, -1 * scale * pt.Y));
     }
 
     /// <summary>
@@ -173,13 +156,13 @@ public class SimplifiedTrack : Track
     /// <param name="vertical">Total vertical distance that the Thumb has moved.</param>        
     public override double ValueFromDistance(double horizontal, double vertical)
     {
-        double scale = IsDirectionReversed ? -1 : 1;
+        var scale = IsDirectionReversed ? -1d : 1d;
+        var range = Math.Max(0.0, Maximum - Minimum);
 
-        // Note: To implement 'Snap-Back' feature, we could check whether the point is far away from center of the track.
-        // If so, just return current value (this should move the Thumb back to its original localtion).
         if (Orientation == Orientation.Horizontal)
-            return scale * horizontal;
-        else
-           return -1 * scale * vertical; //Increases in y cause decreases in Sliders value
+            return scale * horizontal * (range / ActualWidth);
+
+        //Increases in Y cause decreases in value.
+        return -1 * scale * vertical;
     }
 }

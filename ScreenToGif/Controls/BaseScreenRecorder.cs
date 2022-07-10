@@ -127,9 +127,9 @@ public class BaseScreenRecorder : BaseRecorder, IDisposable
 
     internal virtual async Task StopCapture()
     {
-        Capture?.StopStopwatch();
-
         StopInternalCapture();
+
+        Capture?.StopStopwatch();
 
         if (Capture != null)
             await Capture.Stop();

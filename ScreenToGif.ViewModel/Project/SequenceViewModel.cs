@@ -19,6 +19,7 @@ public abstract class SequenceViewModel : BaseViewModel
     private ObservableCollection<object> _effects = new();
     private ulong _streamPosition = 0;
     private string _cachePath = "";
+    private EditorViewModel _editorViewModel = null;
 
     public int Id
     {
@@ -35,25 +36,45 @@ public abstract class SequenceViewModel : BaseViewModel
     public TimeSpan StartTime
     {
         get => _startTime;
-        set => SetProperty(ref _startTime, value);
+        set
+        {
+            SetProperty(ref _startTime, value);
+
+            EditorViewModel?.Render();
+        }
     }
 
     public TimeSpan EndTime
     {
         get => _endTime;
-        set => SetProperty(ref _endTime, value);
+        set
+        {
+            SetProperty(ref _endTime, value);
+
+            EditorViewModel?.Render();
+        }
     }
 
     public double Opacity
     {
         get => _opacity;
-        set => SetProperty(ref _opacity, value);
+        set
+        {
+            SetProperty(ref _opacity, value);
+
+            EditorViewModel?.Render();
+        }
     }
 
     public Brush Background
     {
         get => _background;
-        set => SetProperty(ref _background, value);
+        set
+        {
+            SetProperty(ref _background, value);
+
+            EditorViewModel?.Render();
+        }
     }
 
     public ObservableCollection<object> Effects
@@ -74,19 +95,25 @@ public abstract class SequenceViewModel : BaseViewModel
         set => SetProperty(ref _cachePath, value);
     }
 
-    public static SequenceViewModel FromModel(Sequence sequence)
+    internal EditorViewModel EditorViewModel
+    {
+        get => _editorViewModel;
+        set => SetProperty(ref _editorViewModel, value);
+    }
+
+    public static SequenceViewModel FromModel(Sequence sequence, EditorViewModel baseViewModel)
     {
         switch (sequence)
         {
             case FrameSequence raster:
-                return FrameSequenceViewModel.FromModel(raster);
+                return FrameSequenceViewModel.FromModel(raster, baseViewModel);
 
             case CursorSequence cursor:
-                return CursorSequenceViewModel.FromModel(cursor);
+                return CursorSequenceViewModel.FromModel(cursor, baseViewModel);
 
             //case KeySequence key:
-            //    return KeySequenceViewModel.FromModel(key);
-            
+            //    return KeySequenceViewModel.FromModel(key, baseViewModel);
+
             //TODO: Copy all data.
         }
 

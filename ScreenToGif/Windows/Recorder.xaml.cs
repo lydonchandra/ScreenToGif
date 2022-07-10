@@ -17,7 +17,6 @@ using ScreenToGif.ViewModel;
 using ScreenToGif.Windows.Other;
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -160,6 +159,9 @@ public partial class Recorder
         SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
     }
 
+    //Issues:
+    //Recording, pausing and quickly stopping causes the cache to be sent not as complete.
+    //Sometimes, stoping causes the last frame to have timestamp zeroed.
 
     #region Events
 
@@ -1056,6 +1058,7 @@ public partial class Recorder
             Cursor = Cursors.AppStarting;
 
             _limitTimer.Stop();
+
             await StopCapture();
 
             if (Stage is RecorderStages.Recording or RecorderStages.Paused && Project?.Any == true)

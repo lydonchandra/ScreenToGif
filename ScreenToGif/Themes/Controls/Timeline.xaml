@@ -3,6 +3,40 @@
                     xmlns:n="clr-namespace:ScreenToGif.Controls.Timeline"
                     xmlns:project="clr-namespace:ScreenToGif.ViewModel.Project;assembly=ScreenToGif.ViewModel">
 
+    <Style x:Key="Style.Thumb.Horizontal" TargetType="{x:Type Thumb}">
+        <Setter Property="SnapsToDevicePixels" Value="True"/>
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+        <Setter Property="Background" Value="{DynamicResource Brush.ScrollBar.Border}"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        <Setter Property="VerticalAlignment" Value="Stretch"/>
+
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Thumb}">
+                    <Border Background="{TemplateBinding Background}" Margin="{TemplateBinding Padding}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3">
+                        <!--Icon for dragging-->
+                    </Border>
+
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource Brush.ScrollBar.Background.Hover}"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource Brush.ScrollBar.Border.Hover}"/>
+                        </Trigger>
+
+                        <Trigger Property="IsDragging" Value="True">
+                            <Setter Property="Background" Value="{DynamicResource Brush.ScrollBar.Background.Pressed}"/>
+                            <Setter Property="BorderBrush" Value="{DynamicResource Brush.ScrollBar.Border.Pressed}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <Style TargetType="{x:Type n:ResizableThumb}">
         <Setter Property="SnapsToDevicePixels" Value="True"/>
         <Setter Property="Focusable" Value="False"/>
@@ -26,19 +60,19 @@
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
 
-                            <Thumb Grid.Column="0" x:Name="LeftThumb" Width="10" Background="{TemplateBinding BorderBrush}" Cursor="SizeWE"/>
-                            <Thumb Grid.Column="2" x:Name="RightThumb" Width="10" Background="{TemplateBinding BorderBrush}" Cursor="SizeWE"/>
+                            <Thumb Grid.Column="0" x:Name="LeftThumb" Width="10" Margin="-5,2,0,2" Cursor="SizeWE" Style="{StaticResource Style.Thumb.Horizontal}"/>
+                            <Thumb Grid.Column="2" x:Name="RightThumb" Width="10" Margin="0,2,-5,2" Cursor="SizeWE" Style="{StaticResource Style.Thumb.Horizontal}"/>
                         </Grid>
                     </Border>
 
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{DynamicResource Brush.ScrollBar.Background.Hover}"/>
+                            <!--<Setter Property="Background" Value="{DynamicResource Brush.ScrollBar.Background.Hover}"/>-->
                             <Setter Property="BorderBrush" Value="{DynamicResource Brush.ScrollBar.Border.Hover}"/>
                         </Trigger>
 
                         <Trigger Property="IsDragging" Value="True">
-                            <Setter Property="Background" Value="{DynamicResource Brush.ScrollBar.Background.Pressed}"/>
+                            <!--<Setter Property="Background" Value="{DynamicResource Brush.ScrollBar.Background.Pressed}"/>-->
                             <Setter Property="BorderBrush" Value="{DynamicResource Brush.ScrollBar.Border.Pressed}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
@@ -50,6 +84,7 @@
     <Style TargetType="{x:Type n:HorizontalTimelineScrollBar}">
         <Setter Property="HorizontalAlignment" Value="Stretch"/>
         <Setter Property="VerticalAlignment" Value="Stretch"/>
+        <Setter Property="Background" Value="{DynamicResource Element.Background}"/>
         
         <Setter Property="Template">
             <Setter.Value>
@@ -57,11 +92,18 @@
                     <Border x:Name="MainBorder" Background="{TemplateBinding Background}" Margin="{TemplateBinding Padding}"
                             BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
                             VerticalAlignment="{TemplateBinding VerticalAlignment}" HorizontalAlignment="{TemplateBinding HorizontalAlignment}">
-                        <n:SimplifiedTrack x:Name="SimplifiedTrack" Orientation="Horizontal" EndValue="{TemplateBinding EndValue}">
-                            <n:SimplifiedTrack.Thumb>
-                                <n:ResizableThumb x:Name="ResizableThumb"/>
-                            </n:SimplifiedTrack.Thumb>
-                        </n:SimplifiedTrack>
+                        <Grid>
+                            <n:HorizontalTrackPreviewRenderer x:Name="HorizontalTrackPreviewRenderer" Margin="5,3" IsHitTestVisible="False"
+                                                              Tracks="{TemplateBinding Tracks}" Current="{TemplateBinding Current}"
+                                                              ViewportStart="{TemplateBinding ViewportStart}" ViewportEnd="{TemplateBinding ViewportEnd}"
+                                                              SelectionStart="{TemplateBinding SelectionStart}" SelectionEnd="{TemplateBinding SelectionEnd}"/>
+
+                            <n:SimplifiedTrack x:Name="SimplifiedTrack" Orientation="Horizontal" EndValue="{TemplateBinding EndValue}">
+                                <n:SimplifiedTrack.Thumb>
+                                    <n:ResizableThumb x:Name="ResizableThumb"/>
+                                </n:SimplifiedTrack.Thumb>
+                            </n:SimplifiedTrack>
+                        </Grid>
                     </Border>
 
                     <ControlTemplate.Triggers>
@@ -95,21 +137,49 @@
         </Setter>
     </Style>
 
+    <Style TargetType="{x:Type n:TimelineTrack}">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type n:TimelineTrack}">
+                    <Grid Background="AliceBlue">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="15"/>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition/>
+                        </Grid.ColumnDefinitions>
+
+                        <Thumb Grid.Column="0" Background="{TemplateBinding TrackAccent}" Cursor="SizeAll"/>
+
+                        <Grid Grid.Column="1">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition/>
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="{TemplateBinding TrackName}"/>
+
+                            <StackPanel Grid.Row="1">
+                                <ToggleButton IsChecked="{Binding IsTrackVisible, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                    Visibility
+                                </ToggleButton>
+                            </StackPanel>
+                        </Grid>
+
+                        <Label Grid.Column="2" Content="{Binding ViewportStart, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type n:Timeline}}, StringFormat=g}"/>
+                        <Label Grid.Column="3" Content="{Binding ViewportEnd, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type n:Timeline}}, StringFormat=g}"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <DataTemplate x:Key="TrackTemplate" DataType="{x:Type project:TrackViewModel}">
-        <Grid Background="AliceBlue">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition/>
-            </Grid.ColumnDefinitions>
-                
-            <Label Grid.Column="0">Title: </Label>
-            <Label Grid.Column="1" Content="{Binding ViewportStart, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type n:Timeline}}, StringFormat=g}"/>
-            <Label Grid.Column="2" Content="{Binding ViewportEnd, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type n:Timeline}}, StringFormat=g}"/>
-            <Label Grid.Column="3" Content="{Binding Current, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type n:Timeline}}, StringFormat=g}"/>
-        </Grid>
+        <n:TimelineTrack TrackName="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         IsTrackVisible="{Binding IsVisible, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         IsTrackLocked="{Binding IsLocked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         TrackAccent="{Binding Accent, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                         Sequences="{Binding Sequences, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
     </DataTemplate>
 
     <Style TargetType="{x:Type n:Timeline}">
@@ -123,36 +193,42 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="30"/>
-                            <RowDefinition Height="30"/>
-                            <RowDefinition Height="30"/>
                             <RowDefinition/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="30"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="100"/>
                             <ColumnDefinition/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <n:HorizontalTimelineScrollBar Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" x:Name="TimelineScrollBar" Margin="5,3"
-                                                       Tracks="{Binding Tracks, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                                                       Start="{Binding ViewportStart, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
-                                                       End="{Binding ViewportEnd, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
-                                                       SelectionStart="{TemplateBinding SelectionStart}" SelectionEnd="{TemplateBinding SelectionEnd}"
-                                                       Current="{TemplateBinding Current}"/>
-
-                        <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2">
-                            <Run Text="{Binding ElementName=TimelineScrollBar, Path=Value, UpdateSourceTrigger=PropertyChanged, StringFormat={}#####0.0}"/>
-                            <Run Text="{Binding ElementName=TimelineScrollBar, Path=EndValue, UpdateSourceTrigger=PropertyChanged, StringFormat={}#####0.0}"/>
-                            <Run Text="• Start: "/>
-                            <Run Text="{Binding ViewportStart, RelativeSource={RelativeSource TemplatedParent}, StringFormat=g}"/>
-                            <Run Text="• End: "/>
-                            <Run Text="{Binding ViewportEnd, RelativeSource={RelativeSource TemplatedParent}, StringFormat=g}"/>
-                        </TextBlock>
-
-                        <n:TimeBar Grid.Row="2" Grid.Column="1" x:Name="TimeBar" ViewportStart="{TemplateBinding ViewportStart}"
+                        <n:TimeBar Grid.Row="0" Grid.Column="1" x:Name="TimeBar" ViewportStart="{TemplateBinding ViewportStart}"
                                    ViewportEnd="{TemplateBinding ViewportEnd}" Current="{TemplateBinding Current}"
                                    SelectionStart="{TemplateBinding SelectionStart}" SelectionEnd="{TemplateBinding SelectionEnd}"/>
 
-                        <ItemsControl Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" ItemsSource="{TemplateBinding Tracks}" ItemTemplate="{StaticResource TrackTemplate}"/>
+                        <ItemsControl Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" ItemsSource="{TemplateBinding Tracks}" ItemTemplate="{StaticResource TrackTemplate}"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" TextAlignment="Center">
+                            <Run Text="Start: "/>
+                            <Run Text="{Binding ViewportStart, RelativeSource={RelativeSource TemplatedParent}, StringFormat=g}"/>
+                            <Run Text="• End: "/>
+                            <Run Text="{Binding ViewportEnd, RelativeSource={RelativeSource TemplatedParent}, StringFormat=g}"/>
+                            <Run Text="~ Span: "/>
+                            <Run Text="{Binding ViewportSpan, RelativeSource={RelativeSource TemplatedParent}, StringFormat=g, Mode=OneWay}"/>
+                            <Run Text="{Binding Current, RelativeSource={RelativeSource TemplatedParent}, StringFormat=g, Mode=OneWay}"/>
+                        </TextBlock>
+
+                        <!--<n:VerticalTimelineScrollBar Grid.Row="1" Grid.Column="2" x:Name="VerticalTimelineScrollBar" Margin="5,3"
+                                                     Tracks="{Binding Tracks, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                     SnapsToDevicePixels="True" UseLayoutRounding="True"/>-->
+
+                        <n:HorizontalTimelineScrollBar Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" x:Name="TimelineScrollBar" Margin="5,3"
+                                                       Tracks="{Binding Tracks, RelativeSource={RelativeSource TemplatedParent}, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
+                                                       ViewportStart="{Binding ViewportStart, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                                       ViewportEnd="{Binding ViewportEnd, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}"
+                                                       SelectionStart="{TemplateBinding SelectionStart}" SelectionEnd="{TemplateBinding SelectionEnd}"
+                                                       Current="{TemplateBinding Current}" SnapsToDevicePixels="True" UseLayoutRounding="True"/>
                     </Grid>
                 </ControlTemplate>
             </Setter.Value>

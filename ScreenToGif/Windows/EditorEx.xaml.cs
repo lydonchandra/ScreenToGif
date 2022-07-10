@@ -146,6 +146,13 @@ public partial class EditorEx : Window
 
     private void UIElement_OnMouseDown(object sender, MouseButtonEventArgs e)
     {
-        _editorViewModel.Seek();
+        var time = _editorViewModel.Current + TimeSpan.FromMilliseconds(250);
+
+        _editorViewModel.Seek(time);
+    }
+
+    private void Previewer_OnMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        _editorViewModel.Seek(TimeSpan.FromMilliseconds(0));
     }
 }

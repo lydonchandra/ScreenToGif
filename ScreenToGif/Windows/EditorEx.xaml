@@ -915,7 +915,8 @@
             <!--Decorator layer for displaying UI elements (rubber band selection [click and drag to select elements], selection rectangle, elements [TextBox])-->
 
             <!--Image Previewer-->
-            <ex:Previewer x:Name="Previewer" Source="{Binding RenderedImage, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" Stretch="None"/>
+            <ex:Previewer x:Name="Previewer" Source="{Binding RenderedImage, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}" Stretch="None"
+                          MouseDown="Previewer_OnMouseDown"/>
             <!--<Image x:Name="Previewer" Source="{Binding RenderedImage, UpdateSourceTrigger=PropertyChanged, Mode=OneWay}"/>-->
             
             <!--Side panel (configurable size and position?)-->
@@ -928,7 +929,7 @@
         <!--Configurable height?-->
         <t:Timeline Grid.Row="3"
                     Tracks="{Binding Project.Tracks, Mode=OneWay, UpdateSourceTrigger=PropertyChanged}"
-                    Current="{Binding CurrentTime, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                    Current="{Binding Current, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                     MouseDown="UIElement_OnMouseDown"/>
     </Grid>
 </Window>

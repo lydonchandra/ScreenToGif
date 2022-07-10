@@ -22,7 +22,7 @@ public class FrameSequenceViewModel : RasterSequenceViewModel
         set => SetProperty(ref _frames, value);
     }
 
-    public static FrameSequenceViewModel FromModel(FrameSequence sequence)
+    public static FrameSequenceViewModel FromModel(FrameSequence sequence, EditorViewModel baseViewModel)
     {
         return new FrameSequenceViewModel
         {
@@ -34,6 +34,7 @@ public class FrameSequenceViewModel : RasterSequenceViewModel
             Effects = new ObservableCollection<object>(sequence.Effects), //TODO
             StreamPosition = sequence.StreamPosition,
             CachePath = sequence.CachePath,
+            EditorViewModel = baseViewModel,
             Left = sequence.Left,
             Top = sequence.Top,
             Width = sequence.Width,
@@ -46,7 +47,7 @@ public class FrameSequenceViewModel : RasterSequenceViewModel
             BitsPerChannel = sequence.BitsPerChannel,
             HorizontalDpi = sequence.HorizontalDpi,
             VerticalDpi = sequence.VerticalDpi,
-            Frames = new ObservableCollection<FrameSubSequenceViewModel>(sequence.Frames.Select(FrameSubSequenceViewModel.FromModel).ToList())
+            Frames = new ObservableCollection<FrameSubSequenceViewModel>(sequence.Frames.Select(s => FrameSubSequenceViewModel.FromModel(s, baseViewModel)).ToList())
         };
     }
 
@@ -55,7 +56,7 @@ public class FrameSequenceViewModel : RasterSequenceViewModel
         var ticks = (ulong)timestamp.Ticks;
 
         //Get first frame after timestamp. TODO: I should probably get the frames at timestamp + 60fps(16.6ms) and merge at opacity/n
-        var frame = Frames.FirstOrDefault(f => ticks >= f.TimeStampInTicks);
+        var frame = Frames.FirstOrDefault(f => f.TimeStampInTicks >= ticks);
 
         if (frame == null)
             return;

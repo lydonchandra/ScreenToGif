@@ -19,7 +19,7 @@ public class CursorSequenceViewModel : RasterSequenceViewModel
         set => SetProperty(ref _cursorEvents, value);
     }
 
-    public static CursorSequenceViewModel FromModel(CursorSequence sequence)
+    public static CursorSequenceViewModel FromModel(CursorSequence sequence, EditorViewModel baseViewModel)
     {
         return new CursorSequenceViewModel
         {
@@ -31,6 +31,7 @@ public class CursorSequenceViewModel : RasterSequenceViewModel
             Effects = new ObservableCollection<object>(sequence.Effects), //TODO
             StreamPosition = sequence.StreamPosition,
             CachePath = sequence.CachePath,
+            EditorViewModel = baseViewModel,
             Left = sequence.Left,
             Top = sequence.Top,
             Width = sequence.Width,
@@ -45,7 +46,7 @@ public class CursorSequenceViewModel : RasterSequenceViewModel
         var ticks = (ulong)timestamp.Ticks;
 
         //Get first cursor after timestamp.
-        var cursor = CursorEvents.FirstOrDefault(f => ticks >= f.TimeStampInTicks);
+        var cursor = CursorEvents.FirstOrDefault(f => f.TimeStampInTicks >= ticks);
 
         if (cursor == null)
             return;
