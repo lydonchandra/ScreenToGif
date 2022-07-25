@@ -649,26 +649,172 @@ internal class EncodingManager
 
                             using (var stream = new MemoryStream())
                             {
-                                using (var encoder = new GifFile(stream))
+                                using var encoder = new GifFile(stream);
+
+                                encoder.RepeatCount = embGifPreset.Looped && project.FrameCount > 1 ? (embGifPreset.RepeatForever ? 0 : embGifPreset.RepeatCount) : -1;
+                                encoder.UseGlobalColorTable = embGifPreset.UseGlobalColorTable;
+                                encoder.TransparentColor = embGifPreset.EnableTransparency && embGifPreset.SelectTransparencyColor ? Color.FromArgb(0, embGifPreset.TransparencyColor.R, embGifPreset.TransparencyColor.G, embGifPreset.TransparencyColor.B) :
+                                    (embGifPreset.DetectUnchanged && embGifPreset.PaintTransparent) || embGifPreset.EnableTransparency ? Color.FromArgb(0, embGifPreset.ChromaKey.R, embGifPreset.ChromaKey.G, embGifPreset.ChromaKey.B) :
+                                    new Color?();
+                                encoder.MaximumNumberColor = embGifPreset.MaximumColorCount;
+                                encoder.UseFullTransparency = embGifPreset.EnableTransparency;
+                                encoder.QuantizationType = embGifPreset.Quantizer;
+                                encoder.SamplingFactor = embGifPreset.SamplingFactor;
+
+                                //Get the last index, in cases where the last frames have no changes.
+                                var last = project.FramesFiles.FindLastIndex(f => f.HasArea);
+
+                                //Read the frames pixels from the cache.
+                                using (var fileStream = new FileStream(project.ChunkPath, FileMode.Open, FileAccess.Read, FileShare.Read))
                                 {
-                                    encoder.RepeatCount = embGifPreset.Looped && project.FrameCount > 1 ? (embGifPreset.RepeatForever ? 0 : embGifPreset.RepeatCount) : -1;
-                                    encoder.UseGlobalColorTable = embGifPreset.UseGlobalColorTable;
-                                    encoder.TransparentColor = embGifPreset.EnableTransparency && embGifPreset.SelectTransparencyColor ? Color.FromArgb(0, embGifPreset.TransparencyColor.R, embGifPreset.TransparencyColor.G, embGifPreset.TransparencyColor.B) :
-                                        (embGifPreset.DetectUnchanged && embGifPreset.PaintTransparent) || embGifPreset.EnableTransparency ? Color.FromArgb(0, embGifPreset.ChromaKey.R, embGifPreset.ChromaKey.G, embGifPreset.ChromaKey.B) :
-                                        new Color?();
-                                    encoder.MaximumNumberColor = embGifPreset.MaximumColorCount;
-                                    encoder.UseFullTransparency = embGifPreset.EnableTransparency;
-                                    encoder.QuantizationType = embGifPreset.Quantizer;
-                                    encoder.SamplingFactor = embGifPreset.SamplingFactor;
+                                    bool isUseMultiCore = true;
 
-                                    //Get the last index, in cases where the last frames have no changes.
-                                    var last = project.FramesFiles.FindLastIndex(f => f.HasArea);
-
-                                    //Read the frames pixels from the cache.
-                                    using (var fileStream = new FileStream(project.ChunkPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                                    if (isUseMultiCore && encoder.QuantizationType == ColorQuantizationTypes.Octree)
                                     {
                                         Update(id, 0, string.Format(processing, 0));
 
+                                        if (!project.Frames[0].HasArea && embGifPreset.DetectUnchanged)
+                                        {
+                                        }
+                                        else
+                                        {
+                                            if (project.Frames[0].Delay == 0)
+                                                project.Frames[0].Delay = 10;
+
+                                            fileStream.Position = project.Frames[0].DataPosition;
+                                            encoder.AddFrame(fileStream.ReadBytes((int)project.Frames[0].DataLength),
+                                                project.Frames[0].Rect, project.Frames[0].Delay, last == 0);
+
+                                            Update(id, 0, string.Format(processing, 0));
+
+                                            #region Cancellation
+
+                                            if (tokenSource.Token.IsCancellationRequested)
+                                            {
+                                                Update(id, EncodingStatus.Canceled);
+                                                break;
+                                            }
+
+                                            #endregion
+                                        }
+
+                                        const int parallel = 8;
+                                        const int batchSize = 8;
+                                        var batchCount = project.FrameCount / parallel;
+
+                                        List<FileStream> fileStreams = new();
+                                        List<GifFile> encoders = new();
+                                        for (var idx = 0; idx < parallel; idx++)
+                                        {
+                                            fileStreams.Add(new FileStream(project.ChunkPath, FileMode.Open,
+                                                FileAccess.Read, FileShare.Read));
+
+                                            var parallelEncoder = new GifFile(new MemoryStream());
+                                            parallelEncoder.IsFirstFrame = false;
+                                            parallelEncoder.RepeatCount = embGifPreset.Looped && project.FrameCount > 1 ? (embGifPreset.RepeatForever ? 0 : embGifPreset.RepeatCount) : -1;
+                                            parallelEncoder.UseGlobalColorTable = embGifPreset.UseGlobalColorTable;
+                                            parallelEncoder.TransparentColor = embGifPreset.EnableTransparency && embGifPreset.SelectTransparencyColor ? Color.FromArgb(0, embGifPreset.TransparencyColor.R, embGifPreset.TransparencyColor.G, embGifPreset.TransparencyColor.B) :
+                                                (embGifPreset.DetectUnchanged && embGifPreset.PaintTransparent) || embGifPreset.EnableTransparency ? Color.FromArgb(0, embGifPreset.ChromaKey.R, embGifPreset.ChromaKey.G, embGifPreset.ChromaKey.B) :
+                                                new Color?();
+                                            parallelEncoder.MaximumNumberColor = embGifPreset.MaximumColorCount;
+                                            parallelEncoder.UseFullTransparency = embGifPreset.EnableTransparency;
+                                            parallelEncoder.QuantizationType = embGifPreset.Quantizer;
+                                            parallelEncoder.SamplingFactor = embGifPreset.SamplingFactor;
+
+                                            encoders.Add(parallelEncoder);
+                                        }
+
+                                        for (var batchIdx = 0; batchIdx < batchCount; batchIdx++)
+                                        {
+                                            var tasks = new List<Task>();
+
+                                            for (var j = 0; j < batchSize; j++)
+                                            {
+                                                var parallelIdx = j;
+                                                var frameIdx = (batchIdx * batchSize) + parallelIdx;
+                                                LogWriter.Log("Adding task for frameIdx " + frameIdx);
+                                                if (frameIdx == 0) continue;
+
+                                                tasks.Add(Task.Run(() =>
+                                                {
+                                                    if (!project.Frames[frameIdx].HasArea && embGifPreset.DetectUnchanged)
+                                                        return;
+
+                                                    if (project.Frames[frameIdx].Delay == 0)
+                                                        project.Frames[frameIdx].Delay = 10;
+
+                                                    fileStreams[parallelIdx].Position = project.Frames[frameIdx].DataPosition;
+                                                    encoders[parallelIdx].InternalStream.SetLength(0);
+                                                    encoders[parallelIdx].AddFrame(
+                                                        fileStreams[parallelIdx].ReadBytes((int)project.Frames[frameIdx].DataLength),
+                                                        project.Frames[frameIdx].Rect,
+                                                        project.Frames[frameIdx].Delay,
+                                                        last == frameIdx);
+
+                                                    Update(id, frameIdx, string.Format(processing, frameIdx));
+
+                                                    #region Cancellation
+
+                                                    if (tokenSource.Token.IsCancellationRequested)
+                                                    {
+                                                        Update(id, EncodingStatus.Canceled);
+                                                        // break;
+                                                    }
+
+                                                    #endregion
+                                                }));
+                                            }
+
+                                            var task = Task.WhenAll(tasks);
+                                            task.Wait();
+
+                                            for (var parallelIdx = 0; parallelIdx < batchSize; parallelIdx++)
+                                            {
+                                                if (encoders[parallelIdx].InternalStream.Length == 0)
+                                                {
+                                                    continue;
+                                                }
+                                                encoders[parallelIdx].InternalStream.Seek(0, SeekOrigin.Begin);
+                                                encoders[parallelIdx].InternalStream.CopyTo(encoder.InternalStream);
+                                                encoders[parallelIdx].InternalStream.Seek(0, SeekOrigin.Begin);
+                                            }
+                                        }
+
+                                        var lastBatchFrameIdx = batchCount * batchSize;
+                                        for (var i = lastBatchFrameIdx; i < project.FrameCount; i++)
+                                        {
+                                            LogWriter.Log("Adding task for frameIdx " + i);
+                                            if (!project.Frames[i].HasArea && embGifPreset.DetectUnchanged)
+                                                continue;
+
+                                            if (project.Frames[i].Delay == 0)
+                                                project.Frames[i].Delay = 10;
+
+                                            fileStream.Position = project.Frames[i].DataPosition;
+                                            encoder.AddFrame(
+                                                fileStream.ReadBytes((int)project.Frames[i].DataLength),
+                                                project.Frames[i].Rect,
+                                                project.Frames[i].Delay,
+                                                last == i);
+
+                                            Update(id, i, string.Format(processing, i));
+
+                                            #region Cancellation
+
+                                            if (tokenSource.Token.IsCancellationRequested)
+                                            {
+                                                Update(id, EncodingStatus.Canceled);
+                                                // break;
+                                            }
+                                            #endregion
+
+                                        }
+
+                                        // encoder.CompleteFile();
+                                    }
+                                    else
+                                    {
+                                        Update(id, 0, string.Format(processing, 0));
                                         for (var i = 0; i < project.Frames.Count; i++)
                                         {
                                             if (!project.Frames[i].HasArea && embGifPreset.DetectUnchanged)
@@ -694,6 +840,7 @@ internal class EncodingManager
                                         }
                                     }
                                 }
+
 
                                 try
                                 {
@@ -1309,9 +1456,9 @@ internal class EncodingManager
             {
                 var folder = Path.GetDirectoryName(project.UsesFiles ? project.FramesFiles[0].Path : project.ChunkPath);
 
-                if (!string.IsNullOrEmpty(folder))
-                    if (Directory.Exists(folder))
-                        Directory.Delete(folder, true);
+                // if (!string.IsNullOrEmpty(folder))
+                //     if (Directory.Exists(folder))
+                //         Directory.Delete(folder, true);
             }
             catch (Exception ex)
             {

@@ -116,6 +116,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Util\Commands.cs" />
+    <None Include="Util\EncodingManagerDon.cs" />
     <Page Remove="Themes\Old.xaml" />
   </ItemGroup>
   <Target Name="AfterBuild">

@@ -1,4 +1,5 @@
 using ScreenToGif.Domain.Enums;
+using ScreenToGif.Domain.Enums;
 using ScreenToGif.Util.Codification.Gif.Encoder.Quantization;
 using System.Collections;
 using System.IO;
@@ -54,12 +55,12 @@ public class GifFile : IDisposable
     /// <summary>
     /// The stream which the gif is written on.
     /// </summary>
-    private Stream InternalStream { get; set; }
+    public Stream InternalStream { get; set; }
 
     /// <summary>
     /// True if it's the first frame of the gif.
     /// </summary>
-    private bool IsFirstFrame { get; set; } = true;
+    public bool IsFirstFrame { get; set; } = true;
 
     /// <summary>
     /// The list of indexed pixels, based on a color table (palette).
@@ -85,7 +86,7 @@ public class GifFile : IDisposable
     /// Cumulative non adjusted time.
     /// </summary>
     private int OrganicTime { get; set; }
-        
+
     /// <summary>
     /// Adjusted and rounded off time.
     /// </summary>
@@ -168,7 +169,7 @@ public class GifFile : IDisposable
         //Sort flag (for the global color table): 0
         bitArray.Set(4, true);
 
-        //Size of the Global Color Table (Zero, if not used.): 
+        //Size of the Global Color Table (Zero, if not used.):
         var sizeInBits = ToBitValues(UseGlobalColorTable ? ColorTableSize : 0);
 
         bitArray.Set(5, sizeInBits[0]);
@@ -189,7 +190,7 @@ public class GifFile : IDisposable
             WriteByte(color.B);
         }
 
-        //Do I need to fill up the rest of the color table? 
+        //Do I need to fill up the rest of the color table?
         //Or just seek the stream to the next place?
 
         //(MaximumColorsCount -  ColorCount) * 3 channels [rgb]
@@ -261,7 +262,7 @@ public class GifFile : IDisposable
             //First frame as "Leave" with no Transparency. IsFirstFrame
             //Following frames as "Undefined" with Transparency.
 
-            //Was TransparentColor.HasValue && 
+            //Was TransparentColor.HasValue &&
             if (IsFirstFrame)
             {
                 //Leave.
@@ -344,7 +345,7 @@ public class GifFile : IDisposable
 
     private void WriteImage()
     {
-        //TODO: Fix the new LZW encoder when ColorTableSize == 7. It's getting corrupted. 
+        //TODO: Fix the new LZW encoder when ColorTableSize == 7. It's getting corrupted.
 
         //if (ColorTableSize < 6)
         //{
@@ -384,7 +385,7 @@ public class GifFile : IDisposable
 
             //Indexes the pixels to the color table.
             IndexedPixels = GlobalQuantizer.SecondPass(pixels);
-                
+
             #endregion
         }
         else if (QuantizationType == ColorQuantizationTypes.Octree)
@@ -443,7 +444,7 @@ public class GifFile : IDisposable
 
                 ColorTable = GlobalQuantizer.GetPalette();
             }
-                
+
             //Each frame still needs to be quantized.
             IndexedPixels = GlobalQuantizer.SecondPass(pixels);
 
@@ -486,7 +487,7 @@ public class GifFile : IDisposable
                 //Default palettes: Windows, etc.
                 //User submitted > Presets > Generate palette based on first frame.
 
-                GlobalQuantizer = new PaletteQuantizer(new ArrayList()) 
+                GlobalQuantizer = new PaletteQuantizer(new ArrayList())
                 {
                     MaxColors = MaximumNumberColor,
                     TransparentColor = transparent
@@ -511,7 +512,7 @@ public class GifFile : IDisposable
     }
 
     /// <summary>
-    /// Writes a int value as 2 bytes, but inverted. 
+    /// Writes a int value as 2 bytes, but inverted.
     /// 100 = 64 00 instead of 00 64.
     /// </summary>
     /// <param name="value"></param>
@@ -571,17 +572,17 @@ public class GifFile : IDisposable
         //5 = 64 = 192
         //6 = 128 = 384
         //7 = 256 = 768
-        //The inverse calculation is: 2^(N + 1) 
+        //The inverse calculation is: 2^(N + 1)
         //and x3 for the byte length.
 
-        //If the colorsCount == 1, 
+        //If the colorsCount == 1,
         //return zero instead of calculating it, because of the Log(0) call.
         //The "-1" assures that the count stays in range.
         ColorTableSize = ColorTable.Count > 1 ? (int)Math.Log(ColorTable.Count - 1, 2) : 0;
     }
 
     /// <summary>
-    /// Calculates the maximum number of colors for the 
+    /// Calculates the maximum number of colors for the
     /// specified Logical Screen Description value.
     /// </summary>
     /// <returns>The maximum number of colors in the Color Table.</returns>
@@ -593,7 +594,7 @@ public class GifFile : IDisposable
 
     private int FindTransparentColorIndex()
     {
-        if (IsFirstFrame && !UseFullTransparency || !ColorTableHasTransparency) 
+        if (IsFirstFrame && !UseFullTransparency || !ColorTableHasTransparency)
             return 0;
 
         //ReSharper disable once PossibleInvalidOperationException
@@ -615,6 +616,19 @@ public class GifFile : IDisposable
     #endregion
 
     public void Dispose()
+    {
+        //Add a comment section.
+        WriteComment("Made with ScreenToGif");
+
+        //Complete the file.
+        WriteByte(0x3b);
+        //Push data.
+        InternalStream.Flush();
+        //Resets the stream position to save afterwards.
+        InternalStream.Position = 0;
+    }
+
+    public void CompleteFile()
     {
         //Add a comment section.
         WriteComment("Made with ScreenToGif");
