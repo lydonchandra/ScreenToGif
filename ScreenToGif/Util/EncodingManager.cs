@@ -682,8 +682,11 @@ internal class EncodingManager
                                                 project.Frames[0].Delay = 10;
 
                                             fileStream.Position = project.Frames[0].DataPosition;
-                                            encoder.AddFrame(fileStream.ReadBytes((int)project.Frames[0].DataLength),
-                                                project.Frames[0].Rect, project.Frames[0].Delay, last == 0);
+                                            encoder.AddFrame(
+                                                fileStream.ReadBytes((int)project.Frames[0].DataLength),
+                                                project.Frames[0].Rect,
+                                                project.Frames[0].Delay,
+                                                last == 0);
 
                                             Update(id, 0, string.Format(processing, 0));
 
@@ -699,17 +702,19 @@ internal class EncodingManager
                                         }
 
                                         const int parallel = 8;
-                                        const int batchSize = 8;
+                                        const int batchSize = parallel;
                                         var batchCount = project.FrameCount / parallel;
 
                                         List<FileStream> fileStreams = new();
                                         List<GifFile> encoders = new();
-                                        for (var idx = 0; idx < parallel; idx++)
+                                        for (var idx = 0; idx < batchSize; idx++)
                                         {
                                             fileStreams.Add(new FileStream(project.ChunkPath, FileMode.Open,
                                                 FileAccess.Read, FileShare.Read));
 
                                             var parallelEncoder = new GifFile(new MemoryStream());
+                                            encoders.Add(parallelEncoder);
+                                            // FirstFrame is processed above: [0]
                                             parallelEncoder.IsFirstFrame = false;
                                             parallelEncoder.RepeatCount = embGifPreset.Looped && project.FrameCount > 1 ? (embGifPreset.RepeatForever ? 0 : embGifPreset.RepeatCount) : -1;
                                             parallelEncoder.UseGlobalColorTable = embGifPreset.UseGlobalColorTable;
@@ -720,8 +725,6 @@ internal class EncodingManager
                                             parallelEncoder.UseFullTransparency = embGifPreset.EnableTransparency;
                                             parallelEncoder.QuantizationType = embGifPreset.Quantizer;
                                             parallelEncoder.SamplingFactor = embGifPreset.SamplingFactor;
-
-                                            encoders.Add(parallelEncoder);
                                         }
 
                                         for (var batchIdx = 0; batchIdx < batchCount; batchIdx++)
@@ -737,8 +740,12 @@ internal class EncodingManager
 
                                                 tasks.Add(Task.Run(() =>
                                                 {
-                                                    if (!project.Frames[frameIdx].HasArea && embGifPreset.DetectUnchanged)
+                                                    if (!project.Frames[frameIdx].HasArea &&
+                                                        embGifPreset.DetectUnchanged)
+                                                    {
+                                                        encoders[parallelIdx].InternalStream.SetLength(0);
                                                         return;
+                                                    }
 
                                                     if (project.Frames[frameIdx].Delay == 0)
                                                         project.Frames[frameIdx].Delay = 10;
@@ -768,22 +775,23 @@ internal class EncodingManager
                                             var task = Task.WhenAll(tasks);
                                             task.Wait();
 
-                                            for (var parallelIdx = 0; parallelIdx < batchSize; parallelIdx++)
+                                            for (var j = 0; j < batchSize; j++)
                                             {
-                                                if (encoders[parallelIdx].InternalStream.Length == 0)
+                                                if (encoders[j].InternalStream.Length == 0)
                                                 {
                                                     continue;
                                                 }
-                                                encoders[parallelIdx].InternalStream.Seek(0, SeekOrigin.Begin);
-                                                encoders[parallelIdx].InternalStream.CopyTo(encoder.InternalStream);
-                                                encoders[parallelIdx].InternalStream.Seek(0, SeekOrigin.Begin);
+                                                // LogWriter.Log("Adding task for frameIdx " + i);
+                                                encoders[j].InternalStream.Position = 0;
+                                                encoders[j].InternalStream.CopyTo(encoder.InternalStream);
+                                                encoder.InternalStream.Flush();
+                                                encoders[j].InternalStream.SetLength(0);
                                             }
                                         }
 
                                         var lastBatchFrameIdx = batchCount * batchSize;
                                         for (var i = lastBatchFrameIdx; i < project.FrameCount; i++)
                                         {
-                                            LogWriter.Log("Adding task for frameIdx " + i);
                                             if (!project.Frames[i].HasArea && embGifPreset.DetectUnchanged)
                                                 continue;
 
